@@ -4,15 +4,13 @@ import telebot
 from telebot import types
 
 import config
-import user_contact
+import contact_book
 
 
-contacts = []
-name = None
-phone_number = None
 
-
+contact_builder = contact_book.ContactBuilder()
 bot = telebot.TeleBot(config.token)
+
 
 def create_main_keyboard():
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -30,13 +28,21 @@ def handle_message(message):
 
 def handle_main_commands(message):
     if message.text == 'Добавить контакт':
-        #print('Пользователь захотел добавить контакт')
         delete_keyboard = types.ReplyKeyboardRemove()
         bot.send_message(message.chat.id, 'Как зовут контакта?', reply_markup=delete_keyboard)
         bot.register_next_step_handler(message,process_name_step)
     elif message.text == 'Показать все контакты':
-        #print('Пользователь захотел посмотреть все контакты')
-        bot.send_message(message.chat.id, 'Список всех контактов')
+        contacts =contact_builder.get_contacts(message.chat.id)
+        if len(contacts) > 0:
+            bot.send_message(message.chat.id, 'Список всех контактов')
+            for contact in contacts:
+                bot.send_message(message.chat.id, str(contact))
+            
+        else:
+            bot.send_message(message.chat.id, 'Список контактов пуст')
+
+
+
         bot.register_next_step_handler(message,handle_main_commands)
     else:
         bot.send_message(message.chat.id, 'Так сложно попасть по кнопке?')
@@ -50,7 +56,7 @@ def process_name_step(message):
         bot.register_next_step_handler(message, process_name_step)
 
 
-    #contact_builder.add_name(name)
+    contact_builder.add_name(message.chat.id, name)
     bot.send_message(message.chat.id, 'номер телефона')
     bot.register_next_step_handler(message, process_phone_number_step)
 
@@ -63,21 +69,18 @@ def process_phone_number_step(message):
         bot.register_next_step_handler(message, process_phone_number_step)
 
 
-    #contact_builder.add_phone_number(phone_number)
+    contact_builder.add_phone_number(message.chat.id, phone_number)
 
-    keyboard = types.InlineKeyboardMarkup()
 
-    skip_btn = types.InlineKeyboardButton(text='Пропустить', callback_data='skip_description')
-    keyboard.add(skip_btn)    
-
-    bot.send_message(message.chat.id, 'описание', reply_markup=keyboard)
+    bot.send_message(message.chat.id, 'описание')
     bot.register_next_step_handler(message, process_discription_step)
 
 
 def process_discription_step(message):
     discription = message.text
 
-    #contact_builder.add_discription(discription)
+    contact_builder.add_discription(message.chat.id, discription)
+    contact_builder.build(message.chat.id)
     bot.send_message(message.chat.id, 'Контак создан!', reply_markup=create_main_keyboard())
     bot.register_next_step_handler(message, handle_main_commands)
 
