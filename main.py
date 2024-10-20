@@ -1,7 +1,4 @@
-import datetime
-
 import telebot
-from telebot import types
 
 import config
 import user_contact
@@ -10,76 +7,62 @@ import user_contact
 contacts = []
 name = None
 phone_number = None
+discription = None
 
 
 bot = telebot.TeleBot(config.token)
 
-def create_main_keyboard():
-    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    add_contact_btn = types.KeyboardButton('Добавить контакт')
-    show_contact_btn = types.KeyboardButton('Показать все контакты')
-    keyboard.add(add_contact_btn, show_contact_btn)
-    return keyboard
-
 
 @bot.message_handler(commands=['start'])
 def handle_message(message):
+    bot.send_message(message.chat.id, text="привет!")
+    bot.send_message(message.chat.id, text="Я бот для записи контактов")   
 
-    bot.send_message(message.chat.id, text="привет! Я бот для записи контактов", reply_markup=create_main_keyboard())
-    bot.register_next_step_handler(message, handle_main_commands)
+@bot.message_handler(commands=['new_contact', 'add'])
+def new_contact(message):
+    user_message = bot.reply_to(message, 'Как зовут нового клиента?')
+    bot.register_next_step_handler(user_message, process_name_step)
 
-def handle_main_commands(message):
-    if message.text == 'Добавить контакт':
-        #print('Пользователь захотел добавить контакт')
-        delete_keyboard = types.ReplyKeyboardRemove()
-        bot.send_message(message.chat.id, 'Как зовут контакта?', reply_markup=delete_keyboard)
-        bot.register_next_step_handler(message,process_name_step)
-    elif message.text == 'Показать все контакты':
-        #print('Пользователь захотел посмотреть все контакты')
-        bot.send_message(message.chat.id, 'Список всех контактов')
-        bot.register_next_step_handler(message,handle_main_commands)
+def process_name_step(user_message):
+    global name 
+    name = user_message.text
+    user_messsage = bot.reply_to(user_message, 'Какой номер телефона у контакта?')
+    bot.register_next_step_handler(user_message, process_phone_number_step)
+
+
+
+def process_phone_number_step(user_message):
+    global phone_number 
+    phone_number = user_message.text
+    
+    user_messsage = bot.reply_to(user_message, 'Введите описание контакта(например, друг,коллега, семья).')
+    bot.register_next_step_handler(user_message, process_discription_step)
+
+
+
+def process_discription_step(user_message):
+    global discription
+    discription = user_message.text
+
+
+    user = user_contact.UserContact(name, phone_number, discription)
+    contacts.append(user)
+
+
+    bot.send_message(user_message.chat.id, 'Вы ввели нового контакта')
+    
+
+@bot.message_handler(commands=['contacts'])
+def list_contacts(message):
+    if len(contacts) == 0:
+        output_message = 'Вы не ввели ни одного сообщения'
+        bot.send_message(message.chat.id, output_message)
     else:
-        bot.send_message(message.chat.id, 'Так сложно попасть по кнопке?')
-        bot.register_next_step_handler(message,handle_main_commands)
-        
-def process_name_step(message):
-    name = message.text
-
-    if not name:
-        bot.send_message(message.chat.id, 'Имя не может быть пустым')
-        bot.register_next_step_handler(message, process_name_step)
+        for contact in contacts:
+            bot.send_message(message.chat.id, str(contact))
 
 
-    #contact_builder.add_name(name)
-    bot.send_message(message.chat.id, 'номер телефона')
-    bot.register_next_step_handler(message, process_phone_number_step)
 
-
-def process_phone_number_step(message):
-    phone_number = message.text
-
-    if not phone_number:
-        bot.send_message(message.chat.id, 'телефон не может быть пустым')
-        bot.register_next_step_handler(message, process_phone_number_step)
-
-
-    #contact_builder.add_phone_number(phone_number)
-
-    keyboard = types.InlineKeyboardMarkup()
-
-    skip_btn = types.InlineKeyboardButton(text='Пропустить', callback_data='skip_description')
-    keyboard.add(skip_btn)    
-
-    bot.send_message(message.chat.id, 'описание', reply_markup=keyboard)
-    bot.register_next_step_handler(message, process_discription_step)
-
-
-def process_discription_step(message):
-    discription = message.text
-
-    #contact_builder.add_discription(discription)
-    bot.send_message(message.chat.id, 'Контак создан!', reply_markup=create_main_keyboard())
-    bot.register_next_step_handler(message, handle_main_commands)
 
 
 bot.infinity_polling()

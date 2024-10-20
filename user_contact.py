@@ -1,3 +1,4 @@
+
 class UserContact:
     def __init__(self,
                  name:str,
@@ -8,5 +9,5 @@ class UserContact:
         self.discription = discription
 
     def __str__(self):
-        return f'Имя: {self.name}, Номер телефона: {self.phone_number}'
-    
+        return f'Имя: {self.name}, Номер телефона: {self.phone_number}, Описание: {self.discription}'
+
