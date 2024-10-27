@@ -8,7 +8,7 @@ import contact_book
 
 
 
-contact_builder = contact_book.ContactBuilder()
+contact_builder = contact_book.SqlContactBuilder()
 bot = telebot.TeleBot(config.token)
 
 
@@ -35,8 +35,9 @@ def handle_main_commands(message):
         contacts =contact_builder.get_contacts(message.chat.id)
         if len(contacts) > 0:
             bot.send_message(message.chat.id, 'Список всех контактов')
-            for contact in contacts:
-                bot.send_message(message.chat.id, str(contact))
+            for number,contact in enumerate(contacts, start = 1):
+                output_message = f'{number}. {contact}'
+                bot.send_message(message.chat.id, output_message)
             
         else:
             bot.send_message(message.chat.id, 'Список контактов пуст')
